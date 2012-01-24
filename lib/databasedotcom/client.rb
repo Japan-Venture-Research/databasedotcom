@@ -157,7 +157,9 @@ module Databasedotcom
       classes = (classnames.is_a?(Array) ? classnames : [classnames]).collect do |clazz|
         original_classname = clazz
         clazz = original_classname[0,1].capitalize + original_classname[1..-1]
-        unless const_defined_in_module(module_namespace, clazz)
+        if clazz=="AggregateResult"
+          Databasedotcom::Sobject::AggregateResult
+        elsif !const_defined_in_module(module_namespace, clazz)
           new_class = module_namespace.const_set(clazz, Class.new(Databasedotcom::Sobject::Sobject))
           new_class.client = self
           new_class.materialize(original_classname)
@@ -436,25 +438,29 @@ module Databasedotcom
     # Converts a Hash of object data into a concrete SObject
     def record_from_hash(data)
       attributes = data.delete('attributes')
-      new_record = find_or_materialize(attributes["type"]).new
-      data.each do |name, value|
-        field = new_record.description['fields'].find do |field|
-          key_from_label(field["label"]) == name || field["name"] == name || field["relationshipName"] == name
-        end
+      if attributes['type']=="AggregateResult"
+        new_record = Sobject::AggregateResult.new(data)
+      else
+        new_record = find_or_materialize(attributes["type"]).new
+        data.each do |name, value|
+          field = new_record.description['fields'].find do |field|
+            key_from_label(field["label"]) == name || field["name"] == name || field["relationshipName"] == name
+          end
 
-        # Field not found
-        if field == nil
-          break
-        end
+          # Field not found
+          if field == nil
+            break
+          end
 
-        # If reference/lookup field data was fetched, recursively build the child record and apply
-        if value.is_a?(Hash) and field['type'] == 'reference' and field["relationshipName"]
-          relation = record_from_hash( value )
-          set_value( new_record, field["relationshipName"], relation, 'reference' )
+          # If reference/lookup field data was fetched, recursively build the child record and apply
+          if value.is_a?(Hash) and field['type'] == 'reference' and field["relationshipName"]
+            relation = record_from_hash( value )
+            set_value( new_record, field["relationshipName"], relation, 'reference' )
 
-        # Apply the raw value for all other field types
-        else
-          set_value(new_record, field["name"], value, field["type"]) if field
+          # Apply the raw value for all other field types
+          else
+            set_value(new_record, field["name"], value, field["type"]) if field
+          end
         end
       end
       new_record
