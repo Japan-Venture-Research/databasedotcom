@@ -399,7 +399,7 @@ module Databasedotcom
 
     def log_request(path, options={})
       base_url = options[:host] ? "https://#{options[:host]}" : self.instance_url
-      ::Rails.logger.debug "***** REQUEST: #{path.include?(':') ? path : URI.join(base_url, path)}#{options[:data] ? " => #{options[:data]}" : ''}" if self.debugging
+      ::Rails.logger.debug "***** REQUEST: #{path.include?(':') ? path : URI.join(base_url, path)}#{options[:data] ? " => #{options[:data]}" : ''}".force_encoding('UTF-8') if self.debugging
     end
 
     def uri_escape(str)
@@ -407,7 +407,7 @@ module Databasedotcom
     end
 
     def log_response(result)
-      ::Rails.logger.debug "***** RESPONSE: #{result.class.name} -> #{result.body}" if self.debugging
+      ::Rails.logger.debug "***** RESPONSE: #{result.class.name} -> #{result.body}".force_encoding('UTF-8') if self.debugging
     end
 
     def find_or_materialize(class_or_classname)
